@@ -9,12 +9,12 @@
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // ==========================================
         // CONFIGURATION: PASSWORD & YOUR APPLIED FIREBASE CREDENTIALS
         // ==========================================
-        const ADMIN_PASSWORD = "paladmin"; 
+        const ADMIN_PASSWORD = "FedexAdmin2026!"; 
 
         const firebaseConfig = {
             apiKey: "AizaSyd69nsBI1l0gdAwrbRONO4aRyNuakZRvHo",
@@ -26,7 +26,6 @@
         };
         // ==========================================
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
@@ -37,11 +36,11 @@
         let selectedStart = null;
         let selectedEnd = null;
         let allRequests = [];
+        let unsubscribeDatabase = null;
 
-        // Main Stream North American/Bank Holidays List
+        // Company/Bank Holidays List
         const holidays = {
             "1-1": "New Year's Day",
-            "4-5": "Easter Sunday", 
             "5-25": "Memorial Day",
             "7-4": "Independence Day",
             "9-7": "Labor Day",
@@ -50,7 +49,6 @@
             "12-25": "Christmas Day"
         };
 
-        // DOM Elements
         const roleModal = document.getElementById('roleModal');
         const adminAuthModal = document.getElementById('adminAuthModal');
         const driverAuthModal = document.getElementById('driverAuthModal');
@@ -61,7 +59,6 @@
         const inspectorPanel = document.getElementById('inspectorPanel');
         const driverActionPanel = document.getElementById('driverActionPanel');
 
-        // Global Setup & Window assignments for HTML buttons
         window.selectRole = function(role) {
             if (role === 'admin') {
                 adminAuthModal.classList.remove('hidden');
@@ -110,20 +107,38 @@
             
             const currentYear = new Date().getFullYear();
             const years = [currentYear, currentYear + 1, currentYear + 2];
-            yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+            yearSelect.innerHTML = years.map(y => `<option value="${y}" ${y === currentDate.getFullYear() ? 'selected' : ''}>${y}</option>`).join('');
 
+            // Optimized: Re-hook database listener if year changes to keep payloads small
             monthSelect.addEventListener('change', () => { currentDate.setMonth(monthSelect.value); renderCalendar(); });
-            yearSelect.addEventListener('change', () => { currentDate.setFullYear(yearSelect.value); renderCalendar(); });
+            yearSelect.addEventListener('change', () => { 
+                currentDate.setFullYear(yearSelect.value); 
+                listenToDatabase(); 
+            });
         }
 
         function listenToDatabase() {
-            onSnapshot(collection(db, "timeoff"), (snapshot) => {
+            if (unsubscribeDatabase) unsubscribeDatabase();
+
+            const currentYearStr = String(currentDate.getFullYear());
+            
+            // Performance Fix: Only download documents relevant to the currently viewed tracking year
+            const q = query(
+                collection(db, "timeoff"), 
+                where("start", ">=", `${currentYearStr}-01-01`),
+                where("start", "<=", `${currentYearStr}-12-31`)
+            );
+
+            unsubscribeDatabase = onSnapshot(q, (snapshot) => {
                 allRequests = [];
                 snapshot.forEach((doc) => {
                     allRequests.push({ id: doc.id, ...doc.data() });
                 });
                 renderCalendar();
                 if (currentRole === 'admin') updateInspector();
+            }, (error) => {
+                console.error("Firebase fetch error: ", error);
+                alert("Database connection lost. Please check internet connection.");
             });
         }
 
@@ -145,7 +160,6 @@
                 const holidayKey = `${month + 1}-${day}`;
                 const isHoliday = holidays[holidayKey];
 
-                // Added responsive classes: md:p-2 scales text and padding layout visually when screens scale up
                 dayDiv.className = "relative border border-slate-700 bg-slate-800 rounded-lg flex flex-col justify-between p-1 md:p-2 cursor-pointer select-none transition-all hover:bg-slate-700 aspect-square overflow-hidden font-bold text-xs text-slate-200";
                 
                 let topRowHtml = `<div class="flex justify-between items-center w-full z-10"><span class="text-xs md:text-sm">${day}</span>`;
@@ -155,7 +169,8 @@
                 topRowHtml += `</div>`;
                 dayDiv.innerHTML = topRowHtml;
 
-                const dayMatches = allRequests.filter(req => dateString >= req.start && dateString <= req.end);
+                // Ignore completely denied items from messing with the calendar graphics grids
+                const dayMatches = allRequests.filter(req => req.status !== 'denied' && dateString >= req.start && dateString <= req.end);
                 const approvedMatches = dayMatches.filter(r => r.status === 'approved');
                 const pendingMatches = dayMatches.filter(r => r.status === 'pending');
 
@@ -170,7 +185,6 @@
                     dayDiv.classList.remove('bg-slate-800');
                     dayDiv.classList.add('bg-gradient-to-br', 'from-red-950', 'to-slate-900', 'border-red-700');
                     
-                    // Added responsive md:text-[10px] adjustments to prevent typography blur on desktop viewports
                     let labelHtml = `<span class="text-[8px] md:text-[10px] text-red-400 font-black truncate text-center absolute bottom-1 left-1 right-1 bg-red-950/80 py-0.5 rounded border border-red-900/50">${approvedMatches[0].name}</span>`;
                     
                     const totalExtraCount = dayMatches.length - 1;
@@ -241,8 +255,13 @@
                 return;
             }
 
+            const end = selectedEnd ? selectedEnd : selectedStart;
             const rangeText = selectedEnd ? `${selectedStart} to ${selectedEnd}` : `${selectedStart} (Select End Date)`;
-            const hasConflict = allRequests.some(req => req.status === 'approved' && ((selectedStart >= req.start && selectedStart <= req.end) || (selectedEnd && selectedEnd >= req.start && selectedEnd <= req.end)));
+            
+            // Fixed Logic Bug: Complete mathematical range overlap collision check
+            const hasConflict = allRequests.some(req => {
+                return req.status === 'approved' && (selectedStart <= req.end && end >= req.start);
+            });
 
             let WarningBanner = hasConflict ? `
                 <div class="bg-red-950/60 border border-red-700 rounded p-1.5 mb-2 text-[11px] md:text-xs text-red-300">
@@ -266,23 +285,28 @@
             if (!selectedStart) return;
             const end = selectedEnd ? selectedEnd : selectedStart;
 
-            await addDoc(collection(db, "timeoff"), {
-                name: driverName,
-                start: selectedStart,
-                end: end,
-                status: 'pending',
-                timestamp: Date.now()
-            });
+            try {
+                await addDoc(collection(db, "timeoff"), {
+                    name: driverName,
+                    start: selectedStart,
+                    end: end,
+                    status: 'pending',
+                    timestamp: Date.now()
+                });
 
-            selectedStart = null;
-            selectedEnd = null;
-            
-            if (!addMore) {
-                alert("Request successfully submitted to Admin dashboard!");
-                updateDriverActionPanel();
-            } else {
-                renderCalendar();
-                updateDriverActionPanel();
+                selectedStart = null;
+                selectedEnd = null;
+                
+                if (!addMore) {
+                    alert("Request successfully submitted to Admin dashboard!");
+                    updateDriverActionPanel();
+                } else {
+                    renderCalendar();
+                    updateDriverActionPanel();
+                }
+            } catch (err) {
+                console.error("Error submitting request: ", err);
+                alert("Failed to submit request. Check network signal and try again.");
             }
         };
 
@@ -306,7 +330,10 @@
             } else {
                 html += `<div class="space-y-2 max-h-[150px] md:max-h-[300px] overflow-y-auto pr-1">`;
                 matchRequests.forEach(req => {
-                    const statusColor = req.status === 'approved' ? 'bg-red-500/20 text-red-400 border-red-500' : 'bg-blue-500/10 text-blue-400 border-blue-500/50';
+                    let statusColor = 'bg-blue-500/10 text-blue-400 border-blue-500/50';
+                    if (req.status === 'approved') statusColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/50';
+                    if (req.status === 'denied') statusColor = 'bg-slate-800 text-slate-500 border-slate-700 line-through';
+
                     html += `
                         <div class="p-2 bg-slate-800 border-l-4 ${statusColor} rounded-r flex flex-col gap-1 shadow-sm text-xs md:text-sm">
                             <div class="flex justify-between items-start">
@@ -318,7 +345,7 @@
                             </div>
                             <div class="flex gap-1 justify-end mt-0.5">
                                 ${req.status === 'pending' ? `<button onclick="processRequest('${req.id}', 'approved')" class="bg-emerald-600 hover:bg-emerald-500 text-[10px] md:text-xs font-bold px-2 py-0.5 rounded transition-all text-white cursor-pointer">Approve</button>` : ''}
-                                <button onclick="deleteRequest('${req.id}')" class="bg-rose-700 hover:bg-rose-600 text-[10px] md:text-xs font-bold px-2 py-0.5 rounded transition-all text-white cursor-pointer">Deny</button>
+                                ${req.status !== 'denied' ? `<button onclick="processRequest('${req.id}', 'denied')" class="bg-rose-700 hover:bg-rose-600 text-[10px] md:text-xs font-bold px-2 py-0.5 rounded transition-all text-white cursor-pointer">Deny</button>` : ''}
                             </div>
                         </div>
                     `;
@@ -329,14 +356,12 @@
         }
 
         window.processRequest = async function(id, newStatus) {
-            const docRef = doc(db, "timeoff", id);
-            await updateDoc(docRef, { status: newStatus });
-        };
-
-        window.deleteRequest = async function(id) {
-            if (confirm("Are you sure you want to deny/remove this request?")) {
+            try {
                 const docRef = doc(db, "timeoff", id);
-                await deleteDoc(docRef);
+                await updateDoc(docRef, { status: newStatus });
+            } catch (err) {
+                console.error("Status modification failed: ", err);
+                alert("Failed to update request. Try again.");
             }
         };
     </script>
