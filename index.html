@@ -144,12 +144,13 @@
                 const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const holidayKey = `${month + 1}-${day}`;
 
-                dayDiv.className = "relative border border-slate-700 bg-slate-800 rounded-lg flex flex-col justify-between p-1 cursor-pointer select-none transition-all hover:bg-slate-700 min-h-[45px] max-h-[70px] overflow-hidden font-bold text-xs text-slate-200";
+                // Changed h-full to aspect-square so calendar days remain compact boxes rather than stretching out tall
+                dayDiv.className = "relative border border-slate-700 bg-slate-800 rounded-lg flex flex-col justify-between p-1 cursor-pointer select-none transition-all hover:bg-slate-700 aspect-square overflow-hidden font-bold text-xs text-slate-200";
                 dayDiv.innerHTML = `<span>${day}</span>`;
 
                 if (holidays[holidayKey]) {
                     dayDiv.classList.add('bg-amber-950/40', 'border-amber-500/50');
-                    dayDiv.innerHTML += `<span class="text-[8px] text-amber-400 bg-amber-900/80 px-0.5 rounded truncate absolute bottom-0.5 left-0.5 right-0.5 text-center">Holiday</span>`;
+                    dayDiv.innerHTML += `<span class="text-[7px] text-amber-400 bg-amber-900/80 px-0.5 rounded truncate absolute bottom-0.5 left-0.5 right-0.5 text-center">Holiday</span>`;
                 }
 
                 const dayMatches = allRequests.filter(req => dateString >= req.start && dateString <= req.end);
@@ -159,10 +160,10 @@
                 if (approvedMatches.length > 0) {
                     dayDiv.classList.remove('bg-slate-800');
                     dayDiv.classList.add('bg-red-950', 'border-red-600', 'text-red-200');
-                    dayDiv.innerHTML += `<span class="text-[8px] text-red-400 block truncate font-black text-center absolute bottom-0.5 left-0.5 right-0.5">${approvedMatches[0].name}</span>`;
+                    dayDiv.innerHTML += `<span class="text-[7px] text-red-400 block truncate font-black text-center absolute bottom-0.5 left-0.5 right-0.5">${approvedMatches[0].name}</span>`;
                 } else if (pendingMatches.length > 0) {
                     dayDiv.classList.add('ring-1', 'ring-blue-500/50');
-                    dayDiv.innerHTML += `<span class="text-[8px] text-blue-400 text-center bg-blue-950/80 rounded px-0.5 truncate absolute bottom-0.5 left-0.5 right-0.5">Pending</span>`;
+                    dayDiv.innerHTML += `<span class="text-[7px] text-blue-400 text-center bg-blue-950/80 rounded px-0.5 truncate absolute bottom-0.5 left-0.5 right-0.5">Pend</span>`;
                 }
 
                 if (currentRole === 'driver' && selectedStart) {
@@ -203,7 +204,7 @@
 
         function updateDriverActionPanel() {
             if (!selectedStart) {
-                driverActionPanel.innerHTML = `<p class="text-slate-400 text-center text-xs italic py-1">Tap a start date, then an end date to select your range.</p>`;
+                driverActionPanel.innerHTML = `<p class="text-slate-400 text-center text-xs italic py-2">Tap a start date, then an end date to select your range.</p>`;
                 return;
             }
 
@@ -211,7 +212,7 @@
             const hasConflict = allRequests.some(req => req.status === 'approved' && ((selectedStart >= req.start && selectedStart <= req.end) || (selectedEnd && selectedEnd >= req.start && selectedEnd <= req.end)));
 
             let WarningBanner = hasConflict ? `
-                <div class="bg-red-950/60 border border-red-700 rounded p-1.5 mb-1.5 text-[11px] text-red-300">
+                <div class="bg-red-950/60 border border-red-700 rounded p-1.5 mb-2 text-[11px] text-red-300">
                     ⚠️ Slot occupied by an approved request. Check with Josh/Matt.
                 </div>
             ` : '';
@@ -221,8 +222,8 @@
                 <div class="flex flex-col gap-2">
                     <p class="text-xs font-bold text-center">Selected: <span class="text-emerald-400">${rangeText}</span></p>
                     <div class="flex gap-2">
-                        <button onclick="submitTimeOffRequest(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 font-bold py-2.5 rounded-xl text-xs transition-all shadow-md active:scale-95">Submit Request</button>
-                        <button onclick="submitTimeOffRequest(true)" class="bg-slate-700 hover:bg-slate-600 font-bold px-3 py-2.5 rounded-xl text-[11px] transition-all border border-slate-600 text-slate-300 active:scale-95">+ Add Range</button>
+                        <button onclick="submitTimeOffRequest(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-xl text-xs transition-all shadow-md active:scale-95 text-white">Submit Request</button>
+                        <button onclick="submitTimeOffRequest(true)" class="bg-slate-700 hover:bg-slate-600 font-bold px-3 py-3 rounded-xl text-[11px] transition-all border border-slate-600 text-slate-300 active:scale-95">+ Add Range</button>
                     </div>
                 </div>
             `;
@@ -260,7 +261,7 @@
 
         function updateInspector() {
             if (!inspectedDateGlobal) {
-                inspectorPanel.innerHTML = `<p class="text-slate-400 text-xs text-center italic mt-4">Click any date to inspect requests.</p>`;
+                inspectorPanel.innerHTML = `<p class="text-slate-400 text-xs text-center italic mt-2">Click any date to inspect requests.</p>`;
                 return;
             }
 
@@ -308,9 +309,10 @@
     </script>
 
     <style>
-        /* Allow normal mobile window behavior instead of forced height layout */
         html, body {
             background-color: #0f172a;
+            overflow-x: hidden;
+            overflow-y: auto; /* Re-enable scroll to survive tight phone viewports */
             min-height: 100vh;
         }
     </style>
@@ -332,12 +334,12 @@
 
         <div id="driverAuthModal" class="hidden mt-6 w-full max-w-xs bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl">
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Your Full Name</label>
-            <input type="text" id="driverNameInput" class="w-full bg-slate-800 border border-slate-600 rounded p-2.5 mb-3 font-bold focus:outline-none focus:border-emerald-500 text-center text-slate-100" placeholder="e.g. Jay Dahl">
+            <input type="text" id="driverNameInput" class="w-full bg-slate-800 border border-slate-600 rounded p-2.5 mb-3 font-bold focus:outline-none focus:border-emerald-500 text-center text-slate-100" placeholder="e.g. John Doe">
             <button onclick="submitDriverAuth()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2.5 rounded-xl transition-all shadow-md text-white text-xs">Open Calendar</button>
         </div>
     </div>
 
-    <div id="mainApp" class="opacity-0 transition-opacity duration-300 w-full max-w-md mx-auto pt-6 pb-12 px-4 flex flex-col gap-3">
+    <div id="mainApp" class="opacity-0 transition-opacity duration-300 w-full max-w-md mx-auto pt-4 pb-24 px-3 flex flex-col gap-3">
         
         <header class="flex justify-between items-center border-b border-slate-800 pb-2">
             <div class="flex items-center gap-1.5">
@@ -353,17 +355,16 @@
 
         <main class="flex flex-col gap-3">
             
-            <section class="flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-2.5 shadow-lg">
-                <div class="grid grid-cols-7 gap-1 text-center font-black text-[10px] tracking-wider text-slate-400 uppercase mb-2">
+            <section class="flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-lg">
+                <div class="grid grid-cols-7 gap-1 text-center font-black text-[10px] tracking-wider text-slate-400 uppercase mb-1">
                     <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                 </div>
-                <div id="calendarGrid" class="grid grid-cols-7 auto-rows-fr gap-1">
+                <div id="calendarGrid" class="grid grid-cols-7 gap-1">
                     </div>
             </section>
 
             <section class="flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-lg">
-                <div id="inspectorPanel">
-                    </div>
+                <div id="inspectorPanel"></div>
                 <div id="driverActionPanel">
                     <p class="text-slate-400 text-center text-xs italic py-1">Tap a start date, then an end date to select your range.</p>
                 </div>
