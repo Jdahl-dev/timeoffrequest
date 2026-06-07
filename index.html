@@ -1,12 +1,3 @@
-Here is the updated, single-file code addressing the major structural and logic bugs highlighted in the review, specifically focusing on the calendar behavior, date state consistency, and dynamic holiday tracking. Security fixes have been left aside as requested.
-
-### 🛠️ Key Improvements Implemented
-
-* **Fixed Stale Local Date Selection Bug:** Changing the month dropdown now correctly resets the local selection range (`selectedStart` and `selectedEnd`) and clears the driver action panel, preventing phantom ranges across month jumps.
-* **Fixed Overlapping Name Displays:** When multiple drivers have approved time off on the same day, the calendar tile now dynamically displays a summary list (e.g., `Jay, Bob`) instead of only showing the first name it encounters.
-* **Dynamic Holiday Logic:** Replaced the hardcoded static month-day keys with dynamic calculated holidays for changing US bank holidays (Memorial Day, Labor Day, Thanksgiving) so the script remains accurate regardless of which year is active.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,7 +14,7 @@ Here is the updated, single-file code addressing the major structural and logic 
         // ==========================================
         // CONFIGURATION: PASSWORD & YOUR APPLIED FIREBASE CREDENTIALS
         // ==========================================
-        const ADMIN_PASSWORD = "admin"; 
+        const ADMIN_PASSWORD = "paladmin"; 
 
         const firebaseConfig = {
             apiKey: "AizaSyd69nsBI1l0gdAwrbRONO4aRyNuakZRvHo",
@@ -484,5 +475,3 @@ Here is the updated, single-file code addressing the major structural and logic 
 
 </body>
 </html>
-
-```
