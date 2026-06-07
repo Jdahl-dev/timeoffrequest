@@ -14,7 +14,7 @@
         // ==========================================
         // CONFIGURATION: PASSSWORD & YOUR APPLIED FIREBASE CREDENTIALS
         // ==========================================
-        const ADMIN_PASSWORD = "FedexAdmin2026!"; 
+        const ADMIN_PASSWORD = "FedexAdmin2026!"; // <-- Change your Admin password here if needed!
 
         const firebaseConfig = {
             apiKey: "AizaSyd69nsBI1l0gdAwrbRONO4aRyNuakZRvHo",
@@ -59,7 +59,6 @@
         const monthSelect = document.getElementById('monthSelect');
         const yearSelect = document.getElementById('yearSelect');
         const inspectorPanel = document.getElementById('inspectorPanel');
-        const adminSection = document.getElementById('adminSection');
         const driverActionPanel = document.getElementById('driverActionPanel');
 
         // Global Setup & Window assignments for HTML buttons
@@ -76,7 +75,6 @@
             if (pass === ADMIN_PASSWORD) {
                 currentRole = 'admin';
                 document.getElementById('adminBadge').classList.remove('hidden');
-                adminSection.classList.remove('hidden');
                 initApp();
             } else {
                 alert("Incorrect password.");
@@ -90,7 +88,6 @@
                 currentRole = 'driver';
                 document.getElementById('driverBadge').classList.remove('hidden');
                 document.getElementById('driverBadge').innerText = `Driver: ${driverName}`;
-                adminSection.classList.add('hidden'); // Hide admin panel entirely for drivers
                 initApp();
             } else {
                 alert("Please enter your name.");
@@ -101,8 +98,7 @@
             roleModal.classList.add('hidden');
             adminAuthModal.classList.add('hidden');
             driverAuthModal.classList.add('hidden');
-            mainApp.classList.remove('hidden');
-            setTimeout(() => mainApp.classList.remove('opacity-0'), 50);
+            mainApp.classList.remove('opacity-0');
             
             setupDropdowns();
             listenToDatabase();
@@ -151,13 +147,13 @@
                 const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const holidayKey = `${month + 1}-${day}`;
 
-                dayDiv.className = "relative border border-slate-700 bg-slate-800 rounded-lg flex flex-col justify-between p-1.5 cursor-pointer select-none transition-all hover:bg-slate-700 min-h-[75px] max-h-[110px] overflow-hidden font-bold text-xs sm:text-sm text-slate-200";
+                dayDiv.className = "relative border border-slate-700 bg-slate-800 rounded-lg flex flex-col justify-between p-2 cursor-pointer select-none transition-all hover:bg-slate-700 min-h-[65px] h-full overflow-hidden font-bold text-sm text-slate-200";
                 dayDiv.innerHTML = `<span>${day}</span>`;
 
                 // Handle Main Stream Holiday Flags
                 if (holidays[holidayKey]) {
                     dayDiv.classList.add('bg-amber-950/40', 'border-amber-500/50');
-                    dayDiv.innerHTML += `<span class="text-[9px] text-amber-400 bg-amber-900/80 px-1 rounded truncate absolute bottom-1 left-1 right-1 text-center">Talk to Josh/Matt</span>`;
+                    dayDiv.innerHTML += `<span class="text-[9px] text-amber-400 bg-amber-900/80 px-1 rounded truncate absolute bottom-1 left-1 right-1">Talk to Josh/Matt</span>`;
                 }
 
                 // Scan database matchings for this specific date
@@ -168,17 +164,16 @@
                 if (approvedMatches.length > 0) {
                     dayDiv.classList.remove('bg-slate-800');
                     dayDiv.classList.add('bg-red-950', 'border-red-600', 'text-red-200');
-                    dayDiv.innerHTML += `<span class="text-[10px] text-red-400 block truncate font-black text-center absolute bottom-1 left-1 right-1">${approvedMatches[0].name}${approvedMatches.length > 1 ? ' +'+(approvedMatches.length-1) : ''}</span>`;
+                    dayDiv.innerHTML += `<span class="text-[10px] text-red-400 block truncate font-black text-center">${approvedMatches[0].name}${approvedMatches.length > 1 ? ' +'+(approvedMatches.length-1) : ''}</span>`;
                 } else if (pendingMatches.length > 0) {
                     dayDiv.classList.add('ring-1', 'ring-blue-500/50');
-                    dayDiv.innerHTML += `<span class="text-[9px] text-blue-400 text-center font-medium bg-blue-950/80 rounded px-0.5 truncate absolute bottom-1 left-1 right-1">${pendingMatches.length} Pending</span>`;
+                    dayDiv.innerHTML += `<span class="text-[9px] text-blue-400 text-center font-medium bg-blue-950/80 rounded px-0.5 truncate">${pendingMatches.length} Pending</span>`;
                 }
 
                 // Visual Highlight Selection Logic for Drivers
                 if (currentRole === 'driver' && selectedStart) {
                     if (dateString === selectedStart || (selectedEnd && dateString >= selectedStart && dateString <= selectedEnd)) {
-                        dayDiv.classList.remove('bg-slate-800');
-                        dayDiv.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-950/60');
+                        dayDiv.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-950/50');
                     }
                 }
 
@@ -215,7 +210,7 @@
 
         function updateDriverActionPanel() {
             if (!selectedStart) {
-                driverActionPanel.innerHTML = `<p class="text-slate-400 text-center text-sm italic py-2">Tap a start date, then an end date on the calendar grid above.</p>`;
+                driverActionPanel.innerHTML = `<p class="text-slate-400 text-center text-sm italic">Tap a start date, then an end date to select your range.</p>`;
                 return;
             }
 
@@ -223,18 +218,18 @@
             const hasConflict = allRequests.some(req => req.status === 'approved' && ((selectedStart >= req.start && selectedStart <= req.end) || (selectedEnd && selectedEnd >= req.start && selectedEnd <= req.end)));
 
             let WarningBanner = hasConflict ? `
-                <div class="bg-red-950/60 border border-red-700 rounded-lg p-3 mb-3 text-xs text-red-300">
-                    ⚠️ Notice: This slot contains an approved request. Your request can still be sent, but expect a potential delay or denial unless you check in directly with Josh or Matt.
+                <div class="bg-red-950/60 border border-red-700 rounded p-2 mb-2 text-xs text-red-300">
+                    ⚠️ Notice: This slot is currently occupied by an approved request. Your request can still be submitted, but expects potential denial unless you make a case directly to Josh or Matt.
                 </div>
             ` : '';
 
             driverActionPanel.innerHTML = `
                 ${WarningBanner}
-                <div class="flex flex-col gap-3 p-1">
-                    <p class="text-sm font-bold text-center sm:text-left">Selected Block: <span class="text-emerald-400 underline font-black tracking-wide">${rangeText}</span></p>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <button onclick="submitTimeOffRequest(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 px-4 rounded-xl text-sm transition-all shadow-md active:scale-95">Submit Request</button>
-                        <button onclick="submitTimeOffRequest(true)" class="bg-slate-800 hover:bg-slate-700 font-bold px-4 py-3 rounded-xl text-xs transition-all border border-slate-700 text-slate-300 active:scale-95">+ Add Another Range</button>
+                <div class="flex flex-col gap-2">
+                    <p class="text-sm font-bold">Selected: <span class="text-emerald-400">${rangeText}</span></p>
+                    <div class="flex gap-2">
+                        <button onclick="submitTimeOffRequest(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 font-bold py-2 rounded text-sm transition-all shadow-md">Submit Request</button>
+                        <button onclick="submitTimeOffRequest(true)" class="bg-slate-700 hover:bg-slate-600 font-bold px-3 py-2 rounded text-xs transition-all border border-slate-600 text-slate-300">+ Add Another Range</button>
                     </div>
                 </div>
             `;
@@ -256,7 +251,7 @@
             selectedEnd = null;
             
             if (!addMore) {
-                alert("🎯 Request successfully submitted to Admin dashboard!");
+                alert("Request successfully submitted to Admin dashboard!");
                 updateDriverActionPanel();
             } else {
                 renderCalendar();
@@ -273,7 +268,7 @@
 
         function updateInspector() {
             if (!inspectedDateGlobal) {
-                inspectorPanel.innerHTML = `<p class="text-slate-400 text-sm text-center italic mt-6">Click any calendar date to inspect entries.</p>`;
+                inspectorPanel.innerHTML = `<p class="text-slate-400 text-sm text-center italic mt-10">Click any calendar date to inspect requests.</p>`;
                 return;
             }
 
@@ -284,7 +279,7 @@
             if (matchRequests.length === 0) {
                 html += `<p class="text-slate-500 text-sm italic">No active requests for this day.</p>`;
             } else {
-                html += `<div class="space-y-3 max-h-[400px] overflow-y-auto pr-1">`;
+                html += `<div class="space-y-3 max-h-[75vh] overflow-y-auto pr-1">`;
                 matchRequests.forEach(req => {
                     const statusColor = req.status === 'approved' ? 'bg-red-500/20 text-red-400 border-red-500' : 'bg-blue-500/10 text-blue-400 border-blue-500/50';
                     html += `
@@ -320,61 +315,73 @@
             }
         };
     </script>
+
+    <style>
+        /* Disables mobile rubber-banding behavior to lock screen constraints */
+        html, body {
+            overflow: hidden;
+            height: 100%;
+            position: relative;
+            background-color: #0f172a;
+        }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-900 min-h-screen">
+<body class="text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-900">
 
     <div id="roleModal" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-4">
-        <h1 class="text-2xl sm:text-3xl font-black tracking-tight mb-8 text-center text-slate-100 uppercase max-w-md">FedEx Team Time-Off Portal</h1>
+        <h1 class="text-3xl font-black tracking-tight mb-8 text-center text-slate-100 uppercase">FedEx Team Time-Off Portal</h1>
         <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-            <button onclick="selectRole('driver')" class="flex-1 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 rounded-2xl py-10 text-2xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-emerald-400">DRIVER</button>
-            <button onclick="selectRole('admin')" class="flex-1 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 rounded-2xl py-10 text-2xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-indigo-400">ADMIN</button>
+            <button onclick="selectRole('driver')" class="flex-1 bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 rounded-2xl py-12 text-2xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-emerald-400">DRIVER</button>
+            <button onclick="selectRole('admin')" class="flex-1 bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 rounded-2xl py-12 text-2xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-indigo-400">ADMIN</button>
         </div>
 
         <div id="adminAuthModal" class="hidden mt-8 w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl">
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Enter Secure Passphrase</label>
-            <input type="password" id="adminPassInput" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 mb-3 font-bold focus:outline-none focus:border-indigo-500 text-center text-slate-100" placeholder="••••••••">
-            <button onclick="submitAdminAuth()" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-lg transition-all shadow-md text-white">Authorize Access</button>
+            <input type="password" id="adminPassInput" class="w-full bg-slate-800 border border-slate-600 rounded p-2.5 mb-3 font-bold focus:outline-none focus:border-indigo-500 text-center" placeholder="••••••••">
+            <button onclick="submitAdminAuth()" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-lg transition-all shadow-md">Authorize Access</button>
         </div>
 
         <div id="driverAuthModal" class="hidden mt-8 w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl">
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Your Full Name</label>
-            <input type="text" id="driverNameInput" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 mb-3 font-bold focus:outline-none focus:border-emerald-500 text-center text-slate-100" placeholder="e.g. Jay Dahl">
-            <button onclick="submitDriverAuth()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2.5 rounded-lg transition-all shadow-md text-white">Open Calendar</button>
+            <input type="text" id="driverNameInput" class="w-full bg-slate-800 border border-slate-600 rounded p-2.5 mb-3 font-bold focus:outline-none focus:border-emerald-500 text-center" placeholder="e.g. John Doe">
+            <button onclick="submitDriverAuth()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2.5 rounded-lg transition-all shadow-md">Open Calendar</button>
         </div>
     </div>
 
-    <div id="mainApp" class="hidden opacity-0 transition-opacity duration-300 w-full max-w-7xl mx-auto p-3 sm:p-4 flex flex-col gap-4">
+    <div id="mainApp" class="opacity-0 transition-opacity duration-300 h-screen flex flex-col p-3 max-w-7xl mx-auto">
         
-        <header class="flex flex-col sm:flex-row justify-between items-center border-b border-slate-800 pb-3 gap-3">
+        <header class="flex justify-between items-center border-b border-slate-800 pb-2 mb-2 flex-shrink-0">
             <div class="flex items-center gap-3">
-                <h2 class="text-base sm:text-lg font-black uppercase tracking-tight text-slate-300">Time-Off Framework</h2>
+                <h2 class="text-lg font-black uppercase tracking-tight text-slate-200">Time-Off Framework</h2>
                 <span id="adminBadge" class="hidden bg-indigo-900/80 text-indigo-300 border border-indigo-700 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">Admin</span>
                 <span id="driverBadge" class="hidden bg-emerald-900/80 text-emerald-300 border border-emerald-700 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider"></span>
             </div>
             
-            <div class="flex gap-2 w-full sm:w-auto justify-end">
-                <select id="monthSelect" class="bg-slate-900 border border-slate-700 rounded-lg font-bold text-xs p-2 focus:outline-none focus:border-emerald-500 text-slate-200 cursor-pointer flex-1 sm:flex-initial"></select>
-                <select id="yearSelect" class="bg-slate-900 border border-slate-700 rounded-lg font-bold text-xs p-2 focus:outline-none focus:border-emerald-500 text-slate-200 cursor-pointer flex-1 sm:flex-initial"></select>
+            <div class="flex gap-2">
+                <select id="monthSelect" class="bg-slate-800 border border-slate-700 rounded font-bold text-xs p-1.5 focus:outline-none focus:border-emerald-500 text-slate-200"></select>
+                <select id="yearSelect" class="bg-slate-800 border border-slate-700 rounded font-bold text-xs p-1.5 focus:outline-none focus:border-emerald-500 text-slate-200"></select>
             </div>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-10 gap-4 items-start">
+        <main class="flex-1 grid grid-cols-1 md:grid-cols-10 gap-3 min-h-0 overflow-hidden">
             
-            <section class="col-span-1 lg:col-span-6 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-lg w-full">
-                <div class="grid grid-cols-7 gap-1 text-center font-black text-[10px] sm:text-xs tracking-wider text-slate-400 uppercase mb-3">
+            <section class="md:col-span-6 flex flex-col min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-lg">
+                <div class="grid grid-cols-7 gap-1 text-center font-black text-[11px] tracking-wider text-slate-400 uppercase mb-2 flex-shrink-0">
                     <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                 </div>
-                <div id="calendarGrid" class="grid grid-cols-7 grid-rows-auto gap-1 sm:gap-1.5 w-full">
+                <div id="calendarGrid" class="flex-1 grid grid-cols-7 auto-rows-fr gap-1 min-h-0 overflow-hidden">
                     </div>
-                
-                <div id="driverActionPanel" class="border-t border-slate-800 pt-4 mt-4">
-                    <p class="text-slate-400 text-center text-sm italic py-2">Tap a start date, then an end date on the calendar grid above.</p>
-                </div>
             </section>
 
-            <section id="adminSection" class="hidden col-span-1 lg:col-span-4 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg w-full">
-                <div id="inspectorPanel">
-                    <p class="text-slate-400 text-sm text-center italic mt-4">System successfully synchronized.</p>
+            <section class="md:col-span-4 flex flex-col min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-lg">
+                <div class="h-full flex flex-col justify-between min-h-0">
+                    <div id="inspectorPanel" class="flex-1 min-h-0">
+                        <p class="text-slate-400 text-sm text-center italic mt-10">System successfully synchronized.</p>
+                    </div>
+                    
+                    <div id="driverActionPanel" class="border-t border-slate-800 pt-3 mt-2 flex-shrink-0">
+                        <p class="text-slate-400 text-center text-sm italic">Tap a start date, then an end date to select your range.</p>
+                    </div>
                 </div>
             </section>
         </main>
