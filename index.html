@@ -14,7 +14,7 @@
         // ==========================================
         // CONFIGURATION: PASSSWORD & YOUR APPLIED FIREBASE CREDENTIALS
         // ==========================================
-        const ADMIN_PASSWORD = "paladmin"; 
+        const ADMIN_PASSWORD = "FedexAdmin2026!"; 
 
         const firebaseConfig = {
             apiKey: "AizaSyd69nsBI1l0gdAwrbRONO4aRyNuakZRvHo",
@@ -326,4 +326,59 @@
     <div id="roleModal" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-4">
         <h1 class="text-2xl sm:text-3xl font-black tracking-tight mb-8 text-center text-slate-100 uppercase max-w-md">FedEx Team Time-Off Portal</h1>
         <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-            <button onclick="selectRole('driver')" class="flex-1 bg-slate-900 hover:bg-slate-8
+            <button onclick="selectRole('driver')" class="flex-1 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 rounded-2xl py-10 text-2xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-emerald-400">DRIVER</button>
+            <button onclick="selectRole('admin')" class="flex-1 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 rounded-2xl py-10 text-2xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-indigo-400">ADMIN</button>
+        </div>
+
+        <div id="adminAuthModal" class="hidden mt-8 w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl">
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Enter Secure Passphrase</label>
+            <input type="password" id="adminPassInput" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 mb-3 font-bold focus:outline-none focus:border-indigo-500 text-center text-slate-100" placeholder="••••••••">
+            <button onclick="submitAdminAuth()" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-lg transition-all shadow-md text-white">Authorize Access</button>
+        </div>
+
+        <div id="driverAuthModal" class="hidden mt-8 w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl">
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Your Full Name</label>
+            <input type="text" id="driverNameInput" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 mb-3 font-bold focus:outline-none focus:border-emerald-500 text-center text-slate-100" placeholder="e.g. Jay Dahl">
+            <button onclick="submitDriverAuth()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2.5 rounded-lg transition-all shadow-md text-white">Open Calendar</button>
+        </div>
+    </div>
+
+    <div id="mainApp" class="hidden opacity-0 transition-opacity duration-300 w-full max-w-7xl mx-auto p-3 sm:p-4 flex flex-col gap-4">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-center border-b border-slate-800 pb-3 gap-3">
+            <div class="flex items-center gap-3">
+                <h2 class="text-base sm:text-lg font-black uppercase tracking-tight text-slate-300">Time-Off Framework</h2>
+                <span id="adminBadge" class="hidden bg-indigo-900/80 text-indigo-300 border border-indigo-700 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">Admin</span>
+                <span id="driverBadge" class="hidden bg-emerald-900/80 text-emerald-300 border border-emerald-700 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider"></span>
+            </div>
+            
+            <div class="flex gap-2 w-full sm:w-auto justify-end">
+                <select id="monthSelect" class="bg-slate-900 border border-slate-700 rounded-lg font-bold text-xs p-2 focus:outline-none focus:border-emerald-500 text-slate-200 cursor-pointer flex-1 sm:flex-initial"></select>
+                <select id="yearSelect" class="bg-slate-900 border border-slate-700 rounded-lg font-bold text-xs p-2 focus:outline-none focus:border-emerald-500 text-slate-200 cursor-pointer flex-1 sm:flex-initial"></select>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-10 gap-4 items-start">
+            
+            <section class="col-span-1 lg:col-span-6 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-lg w-full">
+                <div class="grid grid-cols-7 gap-1 text-center font-black text-[10px] sm:text-xs tracking-wider text-slate-400 uppercase mb-3">
+                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                </div>
+                <div id="calendarGrid" class="grid grid-cols-7 grid-rows-auto gap-1 sm:gap-1.5 w-full">
+                    </div>
+                
+                <div id="driverActionPanel" class="border-t border-slate-800 pt-4 mt-4">
+                    <p class="text-slate-400 text-center text-sm italic py-2">Tap a start date, then an end date on the calendar grid above.</p>
+                </div>
+            </section>
+
+            <section id="adminSection" class="hidden col-span-1 lg:col-span-4 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg w-full">
+                <div id="inspectorPanel">
+                    <p class="text-slate-400 text-sm text-center italic mt-4">System successfully synchronized.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+</body>
+</html>
