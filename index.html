@@ -14,7 +14,7 @@
         // ==========================================
         // CONFIGURATION: PASSWORD & YOUR APPLIED FIREBASE CREDENTIALS
         // ==========================================
-        const ADMIN_PASSWORD = "paladmin"; 
+        const ADMIN_PASSWORD = "admin"; 
 
         const firebaseConfig = {
             apiKey: "AizaSyd69nsBI1l0gdAwrbRONO4aRyNuakZRvHo",
@@ -47,7 +47,6 @@
                 [`${year}-12-25`]: "Christmas Day"
             };
 
-            // Helper to find specific nth day of a month (e.g., 1st Monday of September)
             const findNthDayOfMonth = (year, month, dayOfWeek, nth) => {
                 let count = 0;
                 let date = new Date(year, month, 1);
@@ -61,7 +60,6 @@
                 return null;
             };
 
-            // Helper to find the last occurrence of a day in a month
             const findLastDayOfMonth = (year, month, dayOfWeek) => {
                 let date = new Date(year, month + 1, 0);
                 while (date.getMonth() === month) {
@@ -73,10 +71,9 @@
 
             const formatDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-            // Calculate moving dates
-            const memorialDay = findLastDayOfMonth(year, 4, 1); // Last Monday of May
-            const laborDay = findNthDayOfMonth(year, 8, 1, 1);    // 1st Monday of Sept
-            const thanksgiving = findNthDayOfMonth(year, 10, 4, 4); // 4th Thursday of Nov
+            const memorialDay = findLastDayOfMonth(year, 4, 1); 
+            const laborDay = findNthDayOfMonth(year, 8, 1, 1);    
+            const thanksgiving = findNthDayOfMonth(year, 10, 4, 4); 
 
             if (memorialDay) staticHolidays[formatDate(memorialDay)] = "Memorial Day";
             if (laborDay) staticHolidays[formatDate(laborDay)] = "Labor Day";
@@ -147,7 +144,6 @@
 
             monthSelect.addEventListener('change', () => { 
                 currentDate.setMonth(monthSelect.value); 
-                // Clear selection states when changing view context
                 selectedStart = null;
                 selectedEnd = null;
                 updateDriverActionPanel();
@@ -230,7 +226,6 @@
                     dayDiv.classList.remove('bg-slate-800');
                     dayDiv.classList.add('bg-gradient-to-br', 'from-red-950', 'to-slate-900', 'border-red-700');
                     
-                    // FIXED: Join driver names cleanly if multiple allocations overlap on one tile
                     const displayNames = approvedMatches.map(r => r.name.split(' ')[0]).join(', ');
                     let labelHtml = `<span class="text-[8px] md:text-[10px] text-red-400 font-black truncate text-center absolute bottom-1 left-1 right-1 bg-red-950/80 py-0.5 rounded border border-red-900/50">${displayNames}</span>`;
                     
@@ -280,7 +275,6 @@
                 selectedStart = dateStr;
                 selectedEnd = null;
             } else if (dateStr < selectedStart) {
-                // Instantly pivot selection windows gracefully if clicking backward in time
                 selectedStart = dateStr;
                 selectedEnd = null;
             } else {
@@ -318,9 +312,17 @@
                         <button onclick="submitTimeOffRequest(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-xl text-xs md:text-sm transition-all shadow-md active:scale-95 text-white cursor-pointer">Submit Request</button>
                         <button onclick="submitTimeOffRequest(true)" class="bg-slate-700 hover:bg-slate-600 font-bold px-3 py-3 rounded-xl text-[11px] md:text-xs transition-all border border-slate-600 text-slate-300 active:scale-95 cursor-pointer">+ Add Range</button>
                     </div>
+                    <button onclick="window.clearDriverSelection()" class="text-[11px] text-slate-500 hover:text-slate-400 underline mt-1 cursor-pointer">Clear Selection</button>
                 </div>
             `;
         }
+
+        window.clearDriverSelection = function() {
+            selectedStart = null;
+            selectedEnd = null;
+            updateDriverActionPanel();
+            renderCalendar();
+        };
 
         window.submitTimeOffRequest = async function(addMore) {
             if (!selectedStart) return;
