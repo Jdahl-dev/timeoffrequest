@@ -4,18 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FedEx Team Time-Off Tracker</title>
-    
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // ==========================================
-        // CONFIGURATION: PASSWORD & YOUR APPLIED FIREBASE CREDENTIALS
-        // ==========================================
-        const ADMIN_PASSWORD = "paladmin"; 
-
+        const ADMIN_PASSWORD = "admin"; 
         const firebaseConfig = {
             apiKey: "AizaSyd69nsBI1l0gdAwrbRONO4aRyNuakZRvHo",
             authDomain: "paltimeoff.firebaseapp.com",
@@ -24,12 +18,10 @@
             messagingSenderId: "461729759997",
             appId: "1:461729759997:web:ff333d9259518d66f1b494"
         };
-        // ==========================================
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Core State
         let currentRole = null;
         let driverName = "";
         let currentDate = new Date();
@@ -37,8 +29,8 @@
         let selectedEnd = null;
         let allRequests = [];
         let unsubscribeDatabase = null;
+        let inspectedDateGlobal = null;
 
-        // Dynamic Holiday Calculator
         function getHolidaysForYear(year) {
             const staticHolidays = {
                 [`${year}-01-01`]: "New Year's Day",
@@ -46,7 +38,6 @@
                 [`${year}-12-24`]: "Christmas Eve",
                 [`${year}-12-25`]: "Christmas Day"
             };
-
             const findNthDayOfMonth = (year, month, dayOfWeek, nth) => {
                 let count = 0;
                 let date = new Date(year, month, 1);
@@ -59,7 +50,6 @@
                 }
                 return null;
             };
-
             const findLastDayOfMonth = (year, month, dayOfWeek) => {
                 let date = new Date(year, month + 1, 0);
                 while (date.getMonth() === month) {
@@ -68,50 +58,30 @@
                 }
                 return null;
             };
-
             const formatDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
             const memorialDay = findLastDayOfMonth(year, 4, 1); 
             const laborDay = findNthDayOfMonth(year, 8, 1, 1);    
             const thanksgiving = findNthDayOfMonth(year, 10, 4, 4); 
-
             if (memorialDay) staticHolidays[formatDate(memorialDay)] = "Memorial Day";
             if (laborDay) staticHolidays[formatDate(laborDay)] = "Labor Day";
             if (thanksgiving) staticHolidays[formatDate(thanksgiving)] = "Thanksgiving Day";
-
             return staticHolidays;
         }
 
-        const roleModal = document.getElementById('roleModal');
-        const adminAuthModal = document.getElementById('adminAuthModal');
-        const driverAuthModal = document.getElementById('driverAuthModal');
-        const mainApp = document.getElementById('mainApp');
-        const calendarGrid = document.getElementById('calendarGrid');
-        const monthSelect = document.getElementById('monthSelect');
-        const yearSelect = document.getElementById('yearSelect');
-        const inspectorPanel = document.getElementById('inspectorPanel');
-        const driverActionPanel = document.getElementById('driverActionPanel');
-
-        window.selectRole = function(role) {
-            if (role === 'admin') {
-                adminAuthModal.classList.remove('hidden');
-            } else {
-                driverAuthModal.classList.remove('hidden');
-            }
+        window.selectRole = (role) => {
+            if (role === 'admin') document.getElementById('adminAuthModal').classList.remove('hidden');
+            else document.getElementById('driverAuthModal').classList.remove('hidden');
         };
 
-        window.submitAdminAuth = function() {
-            const pass = document.getElementById('adminPassInput').value;
-            if (pass === ADMIN_PASSWORD) {
+        window.submitAdminAuth = () => {
+            if (document.getElementById('adminPassInput').value === ADMIN_PASSWORD) {
                 currentRole = 'admin';
                 document.getElementById('adminBadge').classList.remove('hidden');
                 initApp();
-            } else {
-                alert("Incorrect password.");
-            }
+            } else alert("Incorrect password.");
         };
 
-        window.submitDriverAuth = function() {
+        window.submitDriverAuth = () => {
             const name = document.getElementById('driverNameInput').value.trim();
             if (name) {
                 driverName = name;
@@ -119,241 +89,128 @@
                 document.getElementById('driverBadge').classList.remove('hidden');
                 document.getElementById('driverBadge').innerText = `Driver: ${driverName}`;
                 initApp();
-            } else {
-                alert("Please enter your name.");
-            }
+            } else alert("Please enter your name.");
         };
 
         function initApp() {
-            roleModal.classList.add('hidden');
-            adminAuthModal.classList.add('hidden');
-            driverAuthModal.classList.add('hidden');
-            mainApp.classList.remove('opacity-0');
-            
+            document.getElementById('roleModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('opacity-0');
             setupDropdowns();
             listenToDatabase();
         }
 
         function setupDropdowns() {
             const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            monthSelect.innerHTML = months.map((m, i) => `<option value="${i}" ${i === currentDate.getMonth() ? 'selected' : ''}>${m}</option>`).join('');
-            
+            document.getElementById('monthSelect').innerHTML = months.map((m, i) => `<option value="${i}" ${i === currentDate.getMonth() ? 'selected' : ''}>${m}</option>`).join('');
             const currentYear = new Date().getFullYear();
-            const years = [currentYear, currentYear + 1, currentYear + 2];
-            yearSelect.innerHTML = years.map(y => `<option value="${y}" ${y === currentDate.getFullYear() ? 'selected' : ''}>${y}</option>`).join('');
-
-            monthSelect.addEventListener('change', () => { 
-                currentDate.setMonth(monthSelect.value); 
-                selectedStart = null;
-                selectedEnd = null;
-                updateDriverActionPanel();
-                renderCalendar(); 
-            });
-            
-            yearSelect.addEventListener('change', () => { 
-                currentDate.setFullYear(yearSelect.value); 
-                selectedStart = null;
-                selectedEnd = null;
-                updateDriverActionPanel();
-                listenToDatabase(); 
-            });
+            document.getElementById('yearSelect').innerHTML = [currentYear, currentYear + 1, currentYear + 2].map(y => `<option value="${y}" ${y === currentDate.getFullYear() ? 'selected' : ''}>${y}</option>`).join('');
         }
 
         function listenToDatabase() {
             if (unsubscribeDatabase) unsubscribeDatabase();
-
-            // FIX: Removed strict date queries to ensure all data is fetched locally
-            const q = query(collection(db, "timeoff"));
-
-            unsubscribeDatabase = onSnapshot(q, (snapshot) => {
-                allRequests = [];
-                snapshot.forEach((doc) => {
-                    allRequests.push({ id: doc.id, ...doc.data() });
-                });
+            unsubscribeDatabase = onSnapshot(query(collection(db, "timeoff")), (snapshot) => {
+                allRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderCalendar();
                 if (currentRole === 'admin') updateInspector();
-            }, (error) => {
-                console.error("Firebase fetch error: ", error);
-                alert("Database connection lost.");
             });
         }
 
         function renderCalendar() {
-            calendarGrid.innerHTML = '';
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
             const activeHolidays = getHolidaysForYear(year);
-
             const firstDayIndex = new Date(year, month, 1).getDay();
             const totalDays = new Date(year, month + 1, 0).getDate();
 
-            for (let i = 0; i < firstDayIndex; i++) {
-                calendarGrid.appendChild(document.createElement('div'));
-            }
+            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
 
             for (let day = 1; day <= totalDays; day++) {
                 const dayDiv = document.createElement('div');
                 const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const isHoliday = activeHolidays[dateString];
-
-                dayDiv.className = "relative border border-slate-700 bg-slate-800 rounded-lg flex flex-col justify-between p-1 md:p-2 cursor-pointer select-none transition-all hover:bg-slate-700 aspect-square overflow-hidden font-bold text-xs text-slate-200";
-                
-                let topRowHtml = `<div class="flex justify-between items-center w-full z-10"><span class="text-xs md:text-sm">${day}</span>`;
-                if (isHoliday) {
-                    topRowHtml += `<span class="text-[7px] md:text-[9px] text-amber-400 bg-amber-950 px-1 rounded-sm border border-amber-600/40" title="${isHoliday}">H</span>`;
-                }
-                topRowHtml += `</div>`;
-                dayDiv.innerHTML = topRowHtml;
-
                 const dayMatches = allRequests.filter(req => req.status !== 'denied' && dateString >= req.start && dateString <= req.end);
-                const approvedMatches = dayMatches.filter(r => r.status === 'approved');
-                const pendingMatches = dayMatches.filter(r => r.status === 'pending');
-
-                let isInsideDriverSelection = false;
-                if (currentRole === 'driver' && selectedStart) {
-                    const endCompare = selectedEnd ? selectedEnd : selectedStart;
-                    if (dateString >= selectedStart && dateString <= endCompare) {
-                        isInsideDriverSelection = true;
-                    }
+                
+                dayDiv.className = "relative border border-slate-700 bg-slate-800 rounded-lg flex flex-col p-1 cursor-pointer hover:bg-slate-700 aspect-square transition-all text-xs font-bold";
+                
+                // --- MULTI-REQUEST INDICATOR ---
+                if (dayMatches.length > 1) {
+                    dayDiv.innerHTML = `<span class="absolute top-1 right-1 bg-amber-500 text-[9px] text-slate-900 font-black rounded-full w-4 h-4 flex items-center justify-center z-20">${dayMatches.length}</span>`;
                 }
 
-                if (approvedMatches.length > 0) {
-                    dayDiv.classList.remove('bg-slate-800');
-                    dayDiv.classList.add('bg-gradient-to-br', 'from-red-950', 'to-slate-900', 'border-red-700');
-                    const displayNames = approvedMatches.map(r => r.name.split(' ')[0]).join(', ');
-                    dayDiv.innerHTML += `<span class="text-[8px] md:text-[10px] text-red-400 font-black truncate text-center absolute bottom-1 left-1 right-1 bg-red-950/80 py-0.5 rounded border border-red-900/50">${displayNames}</span>`;
-                    if (isInsideDriverSelection) dayDiv.classList.add('ring-4', 'ring-emerald-400', 'animate-pulse', 'z-20');
-                } else if (pendingMatches.length > 0) {
-                    dayDiv.classList.add('bg-slate-855', 'border-blue-700/60');
-                    const displayNames = pendingMatches.map(r => r.name.split(' ')[0]).join(', ');
-                    dayDiv.innerHTML += `<span class="text-[8px] md:text-[10px] text-blue-400 text-center bg-blue-950/90 border border-blue-800 rounded py-0.5 truncate absolute bottom-1 left-1 right-1 font-medium">${displayNames}</span>`;
-                    if (isInsideDriverSelection) dayDiv.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-950/40');
-                } else if (isInsideDriverSelection) {
-                    dayDiv.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-950/50');
+                dayDiv.innerHTML += `<span class="z-10">${day}</span>`;
+                
+                if (dayMatches.length > 0) {
+                    dayDiv.classList.add(dayMatches.some(r => r.status === 'approved') ? 'bg-red-900/30 border-red-700' : 'bg-blue-900/30 border-blue-700');
                 }
 
-                dayDiv.addEventListener('click', () => {
-                    if (currentRole === 'driver') handleDriverDateSelection(dateString, isHoliday);
-                    else if (currentRole === 'admin') handleAdminInspection(dateString);
-                });
-
-                calendarGrid.appendChild(dayDiv);
+                dayDiv.onclick = () => (currentRole === 'driver') ? handleDriverDateSelection(dateString, activeHolidays[dateString]) : handleAdminInspection(dateString);
+                grid.appendChild(dayDiv);
             }
         }
 
-        // --- All other existing functions (handleDriverDateSelection, submitTimeOffRequest, etc.) remain the same ---
-        window.handleDriverDateSelection = function(dateStr, isHoliday) {
-            if (isHoliday) alert(`⚠️ This date is during ${isHoliday}. Check with Josh or Matt.`);
-            if (!selectedStart || (selectedStart && selectedEnd)) {
-                selectedStart = dateStr;
-                selectedEnd = null;
-            } else if (dateStr < selectedStart) {
-                selectedStart = dateStr;
-            } else {
-                selectedEnd = dateStr;
-            }
+        window.handleDriverDateSelection = (dateStr, isHoliday) => {
+            if (isHoliday) alert(`⚠️ This date is during ${isHoliday}.`);
+            if (!selectedStart || (selectedStart && selectedEnd)) { selectedStart = dateStr; selectedEnd = null; }
+            else if (dateStr < selectedStart) selectedStart = dateStr;
+            else selectedEnd = dateStr;
             renderCalendar();
             updateDriverActionPanel();
         };
 
-        window.updateDriverActionPanel = function() {
-            if (!selectedStart) {
-                driverActionPanel.innerHTML = `<p class="text-slate-400 text-center text-xs md:text-sm italic py-2">Tap a start date, then an end date to select your range.</p>`;
-                return;
-            }
-            const end = selectedEnd ? selectedEnd : selectedStart;
-            const hasConflict = allRequests.some(req => req.status === 'approved' && (selectedStart <= req.end && end >= req.start));
-            
-            driverActionPanel.innerHTML = `
-                ${hasConflict ? `<div class="bg-red-950/60 border border-red-700 rounded p-1.5 mb-2 text-[11px] text-red-300">⚠️ Slot conflict. Check with Josh/Matt.</div>` : ''}
-                <p class="text-xs font-bold text-center">Selected: <span class="text-emerald-400">${selectedStart} to ${end}</span></p>
-                <div class="flex gap-2 mt-2">
-                    <button onclick="submitTimeOffRequest(false)" class="flex-1 bg-emerald-600 py-3 rounded-xl font-bold text-xs text-white">Submit</button>
-                </div>
-                <button onclick="clearDriverSelection()" class="text-[11px] text-slate-500 underline mt-2 block w-full text-center">Clear</button>
-            `;
+        window.updateDriverActionPanel = () => {
+            const panel = document.getElementById('driverActionPanel');
+            if (!selectedStart) { panel.innerHTML = `<p class="text-slate-400 text-center text-xs italic">Tap start then end date.</p>`; return; }
+            panel.innerHTML = `<p class="text-xs text-center font-bold">Selected: ${selectedStart} to ${selectedEnd || selectedStart}</p>
+                               <button onclick="submitTimeOffRequest()" class="w-full mt-2 bg-emerald-600 py-2 rounded-lg font-bold text-xs">Submit</button>
+                               <button onclick="clearDriverSelection()" class="w-full mt-1 text-[10px] text-slate-500 underline">Clear</button>`;
         };
 
-        window.clearDriverSelection = function() {
-            selectedStart = null;
-            selectedEnd = null;
-            updateDriverActionPanel();
-            renderCalendar();
+        window.clearDriverSelection = () => { selectedStart = null; selectedEnd = null; renderCalendar(); updateDriverActionPanel(); };
+
+        window.submitTimeOffRequest = async () => {
+            await addDoc(collection(db, "timeoff"), { name: driverName, start: selectedStart, end: selectedEnd || selectedStart, status: 'pending', timestamp: Date.now() });
+            alert("Request submitted!");
+            clearDriverSelection();
         };
 
-        window.submitTimeOffRequest = async function(addMore) {
-            if (!selectedStart) return;
-            try {
-                await addDoc(collection(db, "timeoff"), {
-                    name: driverName,
-                    start: selectedStart,
-                    end: selectedEnd || selectedStart,
-                    status: 'pending',
-                    timestamp: Date.now()
-                });
-                alert("Request submitted!");
-                clearDriverSelection();
-            } catch (err) { alert("Failed to submit."); }
-        };
+        window.handleAdminInspection = (dateStr) => { inspectedDateGlobal = dateStr; updateInspector(); };
 
-        window.handleAdminInspection = function(dateStr) {
-            inspectedDateGlobal = dateStr;
-            updateInspector();
-        };
-
-        let inspectedDateGlobal = null;
         function updateInspector() {
             if (!inspectedDateGlobal) return;
-            const matchRequests = allRequests.filter(req => inspectedDateGlobal >= req.start && inspectedDateGlobal <= req.end);
-            inspectorPanel.innerHTML = `<h3 class="font-bold border-b border-slate-700 pb-1 mb-2">Date: ${inspectedDateGlobal}</h3>` +
-                (matchRequests.length === 0 ? `<p class="text-xs italic">No requests.</p>` : 
-                matchRequests.map(req => `<div class="p-2 bg-slate-800 rounded border-l-4 ${req.status === 'approved' ? 'border-emerald-500' : 'border-blue-500'} text-xs mb-1">${req.name} (${req.status})</div>`).join(''));
+            const matches = allRequests.filter(req => inspectedDateGlobal >= req.start && inspectedDateGlobal <= req.end);
+            document.getElementById('inspectorPanel').innerHTML = `<h3 class="font-bold text-sm mb-2">${inspectedDateGlobal}</h3>` + 
+                (matches.length ? matches.map(m => `<div class="bg-slate-800 p-1 text-[10px] border-l-2 mb-1 ${m.status === 'approved' ? 'border-emerald-500' : 'border-blue-500'}">${m.name}</div>`).join('') : '<p class="text-[10px]">No requests.</p>');
         }
-
-        window.processRequest = async function(id, newStatus) {
-            await updateDoc(doc(db, "timeoff", id), { status: newStatus });
-        };
     </script>
-    <style>
-        html, body { background-color: #0f172a; min-height: 100vh; }
-    </style>
 </head>
-<body class="text-slate-100 font-sans antialiased">
-    <div id="roleModal" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6">
-        <h1 class="text-2xl font-black mb-8">FedEx Team Time-Off Portal</h1>
-        <div class="flex flex-col gap-4 w-full max-w-sm">
-            <button onclick="selectRole('driver')" class="bg-slate-900 border-2 border-slate-700 rounded-2xl py-8 font-black text-emerald-400">DRIVER</button>
-            <button onclick="selectRole('admin')" class="bg-slate-900 border-2 border-slate-700 rounded-2xl py-8 font-black text-indigo-400">ADMIN</button>
+<body class="bg-slate-950 text-slate-100 p-4">
+    <div id="roleModal" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center">
+        <h1 class="text-2xl font-black mb-8">FedEx Team Time-Off</h1>
+        <div class="flex gap-4">
+            <button onclick="selectRole('driver')" class="bg-slate-900 border border-slate-700 px-8 py-4 rounded-xl font-bold">Driver</button>
+            <button onclick="selectRole('admin')" class="bg-slate-900 border border-slate-700 px-8 py-4 rounded-xl font-bold">Admin</button>
         </div>
-        <div id="adminAuthModal" class="hidden mt-6 w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-4">
-            <input type="password" id="adminPassInput" class="w-full bg-slate-800 p-2 mb-3" placeholder="Password">
-            <button onclick="submitAdminAuth()" class="w-full bg-indigo-600 p-2 rounded">Authorize</button>
-        </div>
-        <div id="driverAuthModal" class="hidden mt-6 w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-4">
-            <input type="text" id="driverNameInput" class="w-full bg-slate-800 p-2 mb-3" placeholder="Name">
-            <button onclick="submitDriverAuth()" class="w-full bg-emerald-600 p-2 rounded">Open Calendar</button>
-        </div>
+        <div id="adminAuthModal" class="hidden mt-4"><input type="password" id="adminPassInput" class="bg-slate-800 p-2 text-white" placeholder="Pass"><button onclick="submitAdminAuth()">Log In</button></div>
+        <div id="driverAuthModal" class="hidden mt-4"><input type="text" id="driverNameInput" class="bg-slate-800 p-2 text-white" placeholder="Name"><button onclick="submitDriverAuth()">Enter</button></div>
     </div>
 
-    <div id="mainApp" class="opacity-0 transition-opacity duration-300 w-full max-w-5xl mx-auto pt-4 px-3 flex flex-col gap-4">
-        <header class="flex justify-between items-center border-b border-slate-800 pb-2">
-            <div id="adminBadge" class="hidden bg-indigo-900 text-indigo-300 px-2 py-1 rounded text-xs font-bold uppercase">Admin</div>
-            <div id="driverBadge" class="hidden bg-emerald-900 text-emerald-300 px-2 py-1 rounded text-xs font-bold uppercase"></div>
+    <div id="mainApp" class="opacity-0 max-w-4xl mx-auto">
+        <header class="flex justify-between pb-4">
+            <div id="adminBadge" class="hidden bg-indigo-900 px-2 py-1 text-xs font-bold">ADMIN</div>
+            <div id="driverBadge" class="hidden bg-emerald-900 px-2 py-1 text-xs font-bold"></div>
             <div class="flex gap-2">
-                <select id="monthSelect" class="bg-slate-800 p-1"></select>
-                <select id="yearSelect" class="bg-slate-800 p-1"></select>
+                <select id="monthSelect" class="bg-slate-800 p-1 text-xs"></select>
+                <select id="yearSelect" class="bg-slate-800 p-1 text-xs"></select>
             </div>
         </header>
-        <main class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <section class="bg-slate-900 rounded-2xl p-4 md:col-span-2">
-                <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-slate-400 uppercase mb-2">
-                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-                </div>
+        <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <section class="md:col-span-2">
                 <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
             </section>
-            <section class="bg-slate-900 rounded-2xl p-4">
-                <div id="inspectorPanel"></div>
-                <div id="driverActionPanel" class="mt-4 pt-4 border-t border-slate-800"></div>
+            <section>
+                <div id="inspectorPanel" class="bg-slate-900 p-4 rounded-xl"></div>
+                <div id="driverActionPanel" class="bg-slate-900 p-4 rounded-xl mt-4"></div>
             </section>
         </main>
     </div>
