@@ -12,7 +12,7 @@
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // ==========================================
-        // CONFIGURATION: PASSSWORD & YOUR APPLIED FIREBASE CREDENTIALS
+        // CONFIGURATION: PASSWORD & YOUR APPLIED FIREBASE CREDENTIALS
         // ==========================================
         const ADMIN_PASSWORD = "paladmin"; 
 
@@ -143,38 +143,71 @@
                 const dayDiv = document.createElement('div');
                 const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const holidayKey = `${month + 1}-${day}`;
+                const isHoliday = holidays[holidayKey];
 
-                // Changed h-full to aspect-square so calendar days remain compact boxes rather than stretching out tall
-                dayDiv.className = "relative border border-slate-700 bg-slate-800 rounded-lg flex flex-col justify-between p-1 cursor-pointer select-none transition-all hover:bg-slate-700 aspect-square overflow-hidden font-bold text-xs text-slate-200";
-                dayDiv.innerHTML = `<span>${day}</span>`;
-
-                if (holidays[holidayKey]) {
-                    dayDiv.classList.add('bg-amber-950/40', 'border-amber-500/50');
-                    dayDiv.innerHTML += `<span class="text-[7px] text-amber-400 bg-amber-900/80 px-0.5 rounded truncate absolute bottom-0.5 left-0.5 right-0.5 text-center">Holiday</span>`;
+                // Added responsive classes: md:p-2 scales text and padding layout visually when screens scale up
+                dayDiv.className = "relative border border-slate-700 bg-slate-800 rounded-lg flex flex-col justify-between p-1 md:p-2 cursor-pointer select-none transition-all hover:bg-slate-700 aspect-square overflow-hidden font-bold text-xs text-slate-200";
+                
+                let topRowHtml = `<div class="flex justify-between items-center w-full z-10"><span class="text-xs md:text-sm">${day}</span>`;
+                if (isHoliday) {
+                    topRowHtml += `<span class="text-[7px] md:text-[9px] text-amber-400 bg-amber-950 px-1 rounded-sm border border-amber-600/40">H</span>`;
                 }
+                topRowHtml += `</div>`;
+                dayDiv.innerHTML = topRowHtml;
 
                 const dayMatches = allRequests.filter(req => dateString >= req.start && dateString <= req.end);
                 const approvedMatches = dayMatches.filter(r => r.status === 'approved');
                 const pendingMatches = dayMatches.filter(r => r.status === 'pending');
 
-                if (approvedMatches.length > 0) {
-                    dayDiv.classList.remove('bg-slate-800');
-                    dayDiv.classList.add('bg-red-950', 'border-red-600', 'text-red-200');
-                    dayDiv.innerHTML += `<span class="text-[7px] text-red-400 block truncate font-black text-center absolute bottom-0.5 left-0.5 right-0.5">${approvedMatches[0].name}</span>`;
-                } else if (pendingMatches.length > 0) {
-                    dayDiv.classList.add('ring-1', 'ring-blue-500/50');
-                    dayDiv.innerHTML += `<span class="text-[7px] text-blue-400 text-center bg-blue-950/80 rounded px-0.5 truncate absolute bottom-0.5 left-0.5 right-0.5">Pend</span>`;
-                }
-
+                let isInsideDriverSelection = false;
                 if (currentRole === 'driver' && selectedStart) {
                     if (dateString === selectedStart || (selectedEnd && dateString >= selectedStart && dateString <= selectedEnd)) {
+                        isInsideDriverSelection = true;
+                    }
+                }
+
+                if (approvedMatches.length > 0) {
+                    dayDiv.classList.remove('bg-slate-800');
+                    dayDiv.classList.add('bg-gradient-to-br', 'from-red-950', 'to-slate-900', 'border-red-700');
+                    
+                    // Added responsive md:text-[10px] adjustments to prevent typography blur on desktop viewports
+                    let labelHtml = `<span class="text-[8px] md:text-[10px] text-red-400 font-black truncate text-center absolute bottom-1 left-1 right-1 bg-red-950/80 py-0.5 rounded border border-red-900/50">${approvedMatches[0].name}</span>`;
+                    
+                    const totalExtraCount = dayMatches.length - 1;
+                    if (totalExtraCount > 0) {
+                        labelHtml += `<span class="absolute top-5 right-1 text-[7px] md:text-[9px] px-0.5 md:px-1 bg-slate-800 text-slate-300 rounded font-normal border border-slate-600">+${totalExtraCount}</span>`;
+                    }
+                    dayDiv.innerHTML += labelHtml;
+
+                    if (isInsideDriverSelection) {
+                        dayDiv.classList.add('ring-4', 'ring-emerald-400', 'animate-pulse', 'z-20');
+                    }
+                } else if (pendingMatches.length > 0) {
+                    dayDiv.classList.add('bg-slate-850', 'border-blue-700/60');
+                    
+                    let labelHtml = `<span class="text-[8px] md:text-[10px] text-blue-400 text-center bg-blue-950/90 border border-blue-800 rounded py-0.5 truncate absolute bottom-1 left-1 right-1 font-medium">${pendingMatches[0].name}</span>`;
+                    
+                    const totalExtraCount = dayMatches.length - 1;
+                    if (totalExtraCount > 0) {
+                        labelHtml += `<span class="absolute top-5 right-1 text-[7px] md:text-[9px] px-0.5 md:px-1 bg-slate-800 text-slate-300 rounded font-normal border border-slate-600">+${totalExtraCount}</span>`;
+                    }
+                    dayDiv.innerHTML += labelHtml;
+
+                    if (isInsideDriverSelection) {
+                        dayDiv.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-950/40');
+                    }
+                } else {
+                    if (isHoliday) {
+                        dayDiv.classList.add('bg-amber-950/20', 'border-amber-600/30');
+                    }
+                    if (isInsideDriverSelection) {
                         dayDiv.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-950/50');
                     }
                 }
 
                 dayDiv.addEventListener('click', () => {
                     if (currentRole === 'driver') {
-                        handleDriverDateSelection(dateString, holidays[holidayKey]);
+                        handleDriverDateSelection(dateString, isHoliday);
                     } else if (currentRole === 'admin') {
                         handleAdminInspection(dateString);
                     }
@@ -204,7 +237,7 @@
 
         function updateDriverActionPanel() {
             if (!selectedStart) {
-                driverActionPanel.innerHTML = `<p class="text-slate-400 text-center text-xs italic py-2">Tap a start date, then an end date to select your range.</p>`;
+                driverActionPanel.innerHTML = `<p class="text-slate-400 text-center text-xs md:text-sm italic py-2">Tap a start date, then an end date to select your range.</p>`;
                 return;
             }
 
@@ -212,7 +245,7 @@
             const hasConflict = allRequests.some(req => req.status === 'approved' && ((selectedStart >= req.start && selectedStart <= req.end) || (selectedEnd && selectedEnd >= req.start && selectedEnd <= req.end)));
 
             let WarningBanner = hasConflict ? `
-                <div class="bg-red-950/60 border border-red-700 rounded p-1.5 mb-2 text-[11px] text-red-300">
+                <div class="bg-red-950/60 border border-red-700 rounded p-1.5 mb-2 text-[11px] md:text-xs text-red-300">
                     ⚠️ Slot occupied by an approved request. Check with Josh/Matt.
                 </div>
             ` : '';
@@ -220,10 +253,10 @@
             driverActionPanel.innerHTML = `
                 ${WarningBanner}
                 <div class="flex flex-col gap-2">
-                    <p class="text-xs font-bold text-center">Selected: <span class="text-emerald-400">${rangeText}</span></p>
+                    <p class="text-xs md:text-sm font-bold text-center">Selected: <span class="text-emerald-400">${rangeText}</span></p>
                     <div class="flex gap-2">
-                        <button onclick="submitTimeOffRequest(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-xl text-xs transition-all shadow-md active:scale-95 text-white">Submit Request</button>
-                        <button onclick="submitTimeOffRequest(true)" class="bg-slate-700 hover:bg-slate-600 font-bold px-3 py-3 rounded-xl text-[11px] transition-all border border-slate-600 text-slate-300 active:scale-95">+ Add Range</button>
+                        <button onclick="submitTimeOffRequest(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-xl text-xs md:text-sm transition-all shadow-md active:scale-95 text-white cursor-pointer">Submit Request</button>
+                        <button onclick="submitTimeOffRequest(true)" class="bg-slate-700 hover:bg-slate-600 font-bold px-3 py-3 rounded-xl text-[11px] md:text-xs transition-all border border-slate-600 text-slate-300 active:scale-95 cursor-pointer">+ Add Range</button>
                     </div>
                 </div>
             `;
@@ -261,31 +294,31 @@
 
         function updateInspector() {
             if (!inspectedDateGlobal) {
-                inspectorPanel.innerHTML = `<p class="text-slate-400 text-xs text-center italic mt-2">Click any date to inspect requests.</p>`;
+                inspectorPanel.innerHTML = `<p class="text-slate-400 text-xs md:text-sm text-center italic mt-2">Click any date to inspect requests.</p>`;
                 return;
             }
 
             const matchRequests = allRequests.filter(req => inspectedDateGlobal >= req.start && inspectedDateGlobal <= req.end);
-            let html = `<h3 class="font-black text-slate-100 border-b border-slate-700 pb-1 mb-2 text-xs">Date: ${inspectedDateGlobal}</h3>`;
+            let html = `<h3 class="font-black text-slate-100 border-b border-slate-700 pb-1 mb-2 text-xs md:text-sm">Date: ${inspectedDateGlobal}</h3>`;
             
             if (matchRequests.length === 0) {
-                html += `<p class="text-slate-500 text-xs italic">No active requests.</p>`;
+                html += `<p class="text-slate-500 text-xs md:text-sm italic">No active requests.</p>`;
             } else {
-                html += `<div class="space-y-2 max-h-[150px] overflow-y-auto pr-1">`;
+                html += `<div class="space-y-2 max-h-[150px] md:max-h-[300px] overflow-y-auto pr-1">`;
                 matchRequests.forEach(req => {
                     const statusColor = req.status === 'approved' ? 'bg-red-500/20 text-red-400 border-red-500' : 'bg-blue-500/10 text-blue-400 border-blue-500/50';
                     html += `
-                        <div class="p-2 bg-slate-800 border-l-4 ${statusColor} rounded-r flex flex-col gap-1 shadow-sm text-xs">
+                        <div class="p-2 bg-slate-800 border-l-4 ${statusColor} rounded-r flex flex-col gap-1 shadow-sm text-xs md:text-sm">
                             <div class="flex justify-between items-start">
                                 <div>
                                     <p class="font-black text-slate-200">${req.name}</p>
-                                    <p class="text-[10px] text-slate-400">${req.start} to ${req.end}</p>
+                                    <p class="text-[10px] md:text-xs text-slate-400">${req.start} to ${req.end}</p>
                                 </div>
-                                <span class="text-[9px] uppercase tracking-wider font-bold">${req.status}</span>
+                                <span class="text-[9px] md:text-xs uppercase tracking-wider font-bold">${req.status}</span>
                             </div>
                             <div class="flex gap-1 justify-end mt-0.5">
-                                ${req.status === 'pending' ? `<button onclick="processRequest('${req.id}', 'approved')" class="bg-emerald-600 hover:bg-emerald-500 text-[10px] font-bold px-2 py-0.5 rounded transition-all text-white">Approve</button>` : ''}
-                                <button onclick="deleteRequest('${req.id}')" class="bg-rose-700 hover:bg-rose-600 text-[10px] font-bold px-2 py-0.5 rounded transition-all text-white">Deny</button>
+                                ${req.status === 'pending' ? `<button onclick="processRequest('${req.id}', 'approved')" class="bg-emerald-600 hover:bg-emerald-500 text-[10px] md:text-xs font-bold px-2 py-0.5 rounded transition-all text-white cursor-pointer">Approve</button>` : ''}
+                                <button onclick="deleteRequest('${req.id}')" class="bg-rose-700 hover:bg-rose-600 text-[10px] md:text-xs font-bold px-2 py-0.5 rounded transition-all text-white cursor-pointer">Deny</button>
                             </div>
                         </div>
                     `;
@@ -312,7 +345,7 @@
         html, body {
             background-color: #0f172a;
             overflow-x: hidden;
-            overflow-y: auto; /* Re-enable scroll to survive tight phone viewports */
+            overflow-y: auto; 
             min-height: 100vh;
         }
     </style>
@@ -320,52 +353,53 @@
 <body class="text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-900 antialiased">
 
     <div id="roleModal" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6">
-        <h1 class="text-2xl font-black tracking-tight mb-8 text-center text-slate-100 uppercase max-w-xs">FedEx Team Time-Off Portal</h1>
-        <div class="flex flex-col gap-4 w-full max-w-xs">
-            <button onclick="selectRole('driver')" class="bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 rounded-2xl py-8 text-xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-emerald-400">DRIVER</button>
-            <button onclick="selectRole('admin')" class="bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 rounded-2xl py-8 text-xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-indigo-400">ADMIN</button>
+        <h1 class="text-2xl md:text-3xl font-black tracking-tight mb-8 text-center text-slate-100 uppercase max-w-sm">FedEx Team Time-Off Portal</h1>
+        <div class="flex flex-col gap-4 w-full max-w-xs md:max-w-sm">
+            <button onclick="selectRole('driver')" class="bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 rounded-2xl py-8 md:py-10 text-xl md:text-2xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-emerald-400 cursor-pointer">DRIVER</button>
+            <button onclick="selectRole('admin')" class="bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 rounded-2xl py-8 md:py-10 text-xl md:text-2xl font-black tracking-wide shadow-xl active:scale-95 transition-all text-indigo-400 cursor-pointer">ADMIN</button>
         </div>
 
-        <div id="adminAuthModal" class="hidden mt-6 w-full max-w-xs bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl">
+        <div id="adminAuthModal" class="hidden mt-6 w-full max-w-xs md:max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl">
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Enter Secure Passphrase</label>
             <input type="password" id="adminPassInput" class="w-full bg-slate-800 border border-slate-600 rounded p-2.5 mb-3 font-bold focus:outline-none focus:border-indigo-500 text-center text-slate-100" placeholder="••••••••">
-            <button onclick="submitAdminAuth()" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-xl transition-all shadow-md text-white text-xs">Authorize Access</button>
+            <button onclick="submitAdminAuth()" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-xl transition-all shadow-md text-white text-xs md:text-sm cursor-pointer">Authorize Access</button>
         </div>
 
-        <div id="driverAuthModal" class="hidden mt-6 w-full max-w-xs bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl">
+        <div id="driverAuthModal" class="hidden mt-6 w-full max-w-xs md:max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-2xl">
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Your Full Name</label>
             <input type="text" id="driverNameInput" class="w-full bg-slate-800 border border-slate-600 rounded p-2.5 mb-3 font-bold focus:outline-none focus:border-emerald-500 text-center text-slate-100" placeholder="e.g. John Doe">
-            <button onclick="submitDriverAuth()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2.5 rounded-xl transition-all shadow-md text-white text-xs">Open Calendar</button>
+            <button onclick="submitDriverAuth()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2.5 rounded-xl transition-all shadow-md text-white text-xs md:text-sm cursor-pointer">Open Calendar</button>
         </div>
     </div>
 
-    <div id="mainApp" class="opacity-0 transition-opacity duration-300 w-full max-w-md mx-auto pt-4 pb-24 px-3 flex flex-col gap-3">
+    <div id="mainApp" class="opacity-0 transition-opacity duration-300 w-full max-w-md md:max-w-5xl mx-auto pt-4 pb-24 px-3 flex flex-col gap-4">
         
         <header class="flex justify-between items-center border-b border-slate-800 pb-2">
             <div class="flex items-center gap-1.5">
-                <span id="adminBadge" class="hidden bg-indigo-900/80 text-indigo-300 border border-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Admin</span>
-                <span id="driverBadge" class="hidden bg-emerald-900/80 text-emerald-300 border border-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"></span>
+                <span id="adminBadge" class="hidden bg-indigo-900/80 text-indigo-300 border border-indigo-700 px-1.5 py-0.5 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider">Admin</span>
+                <span id="driverBadge" class="hidden bg-emerald-900/80 text-emerald-300 border border-emerald-700 px-1.5 py-0.5 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider"></span>
             </div>
             
-            <div class="flex gap-1">
-                <select id="monthSelect" class="bg-slate-800 border border-slate-700 rounded font-bold text-xs p-1 focus:outline-none focus:border-emerald-500 text-slate-200 cursor-pointer"></select>
-                <select id="yearSelect" class="bg-slate-800 border border-slate-700 rounded font-bold text-xs p-1 focus:outline-none focus:border-emerald-500 text-slate-200 cursor-pointer"></select>
+            <div class="flex gap-1.5">
+                <select id="monthSelect" class="bg-slate-800 border border-slate-700 rounded font-bold text-xs md:text-sm p-1.5 focus:outline-none focus:border-emerald-500 text-slate-200 cursor-pointer"></select>
+                <select id="yearSelect" class="bg-slate-800 border border-slate-700 rounded font-bold text-xs md:text-sm p-1.5 focus:outline-none focus:border-emerald-500 text-slate-200 cursor-pointer"></select>
             </div>
         </header>
 
-        <main class="flex flex-col gap-3">
+        <main class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
             
-            <section class="flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-lg">
-                <div class="grid grid-cols-7 gap-1 text-center font-black text-[10px] tracking-wider text-slate-400 uppercase mb-1">
+            <section class="flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-2.5 md:p-4 shadow-lg md:col-span-2">
+                <div class="grid grid-cols-7 gap-1 text-center font-black text-[10px] md:text-xs tracking-wider text-slate-400 uppercase mb-2">
                     <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                 </div>
-                <div id="calendarGrid" class="grid grid-cols-7 gap-1">
-                    </div>
+                <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-1.5"></div>
             </section>
 
-            <section class="flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-lg">
-                <div id="inspectorPanel"></div>
-                <div id="driverActionPanel">
+            <section class="flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-3 md:p-4 shadow-lg h-full justify-between">
+                <div>
+                    <div id="inspectorPanel"></div>
+                </div>
+                <div id="driverActionPanel" class="mt-4 pt-4 border-t border-slate-800/60">
                     <p class="text-slate-400 text-center text-xs italic py-1">Tap a start date, then an end date to select your range.</p>
                 </div>
             </section>
